@@ -62,6 +62,7 @@ public class Plugin : IDalamudPlugin
         //	Event Subscription
         PluginInterface.UiBuilder.Draw += DrawUI;
         PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
+        PluginInterface.UiBuilder.OpenMainUi += DrawMainUI;
         PluginInterface.LanguageChanged += OnLanguageChanged;
         ClientState.TerritoryChanged += OnTerritoryChanged;
 
@@ -80,8 +81,9 @@ public class Plugin : IDalamudPlugin
 
         PluginInterface.UiBuilder.Draw -= DrawUI;
         PluginInterface.UiBuilder.OpenConfigUi -= DrawConfigUI;
+		PluginInterface.UiBuilder.OpenMainUi -= DrawMainUI;
 
-        PluginUI?.Dispose();
+		PluginUI?.Dispose();
     }
 
     protected void OnLanguageChanged(string langCode)
@@ -469,6 +471,11 @@ public class Plugin : IDalamudPlugin
     protected void DrawConfigUI()
     {
         PluginUI.SettingsWindow.WindowVisible = true;
+    }
+
+    protected void DrawMainUI()
+    {
+        PluginUI.LibraryWindow.WindowVisible = true;
     }
 
     protected void OnTerritoryChanged(ushort ID)
