@@ -10,8 +10,9 @@ namespace WaymarkPresetPlugin.Subscription
 {
 	public class SubscriptionManifestYAML
 	{
-		public string Name { get; set; } = null!;
-		
+		public string name { get; set; } = null!;
+		//the path to search for waymarks using their relative urls
+		public string folderurl { get; set; } = null!;
 		public List<WaymarkYAML> waymarks {  get; set; } = null!;
 
 		public static SubscriptionManifestYAML From(string input){
@@ -26,7 +27,7 @@ namespace WaymarkPresetPlugin.Subscription
 
 	public class WaymarkYAML
 	{
-		public string? Name { get; set; } = null!;
-		public string? UrlToWaymark { get; set; } = null!;
+		public string? name { get; set; } = null!;
+		public string? url { get; set; } = null!;
 	}
 }

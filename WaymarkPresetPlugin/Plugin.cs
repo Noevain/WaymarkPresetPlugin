@@ -2,16 +2,20 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using CheapLoc;
 using Dalamud.Game;
 using Dalamud.Game.Command;
 using Dalamud.IoC;
+using Dalamud.Networking.Http;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using ImGuiNET;
 using Newtonsoft.Json;
+using WaymarkPresetPlugin.Subscription;
 
 namespace WaymarkPresetPlugin;
 
@@ -46,7 +50,13 @@ public class Plugin : IDalamudPlugin
     protected Configuration Configuration;
     protected PluginUI PluginUI;
 
-    public Plugin()
+	public static HappyEyeballsCallback _happyEyeballsCallback { get; private set; } = null!;
+
+	public static HttpClient _httpClient { get; private set; } = null!;
+
+    public static SubscriptionManager SubscriptionManager { get; private set; } = null!;
+
+	public Plugin()
     {
         //	Localization and Command Initialization
         OnLanguageChanged(PluginInterface.UiLanguage);
@@ -55,9 +65,17 @@ public class Plugin : IDalamudPlugin
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
         ZoneInfoHandler.Init();
+		_happyEyeballsCallback = new HappyEyeballsCallback();
+		_httpClient = new HttpClient(new SocketsHttpHandler
+		{
+			AutomaticDecompression = DecompressionMethods.All,
+			ConnectCallback = _happyEyeballsCallback.ConnectCallback,
+			MaxConnectionsPerServer = 4 // Github won't allow more then 10 max connections
+		});
 
-        //	UI Initialization
-        PluginUI = new PluginUI(Configuration);
+        SubscriptionManager = new SubscriptionManager(new List<string>(), new System.Collections.Concurrent.ConcurrentDictionary<string, string>(), this);
+		//	UI Initialization
+		PluginUI = new PluginUI(Configuration);
 
         //	Event Subscription
         PluginInterface.UiBuilder.Draw += DrawUI;
@@ -148,6 +166,11 @@ public class Plugin : IDalamudPlugin
         else if (subCommand == "debug")
         {
             PluginUI.DebugWindow.WindowVisible = !PluginUI.DebugWindow.WindowVisible;
+        }
+        else if (subCommand == "trysync")
+        {
+            SubscriptionManager.Sync("https://raw.githubusercontent.com/noevain/All-The-Waymarks/master/NA/NA.yaml");
+            commandResponse = "yay";
         }
         else if (subCommand == SubcommandSlotInfo)
         {
@@ -279,6 +302,18 @@ public class Plugin : IDalamudPlugin
 
     }
 
+    public void ProcessSubscriptionImport(string preset)
+    {
+        try
+        {
+            var tempPreset = Configuration.PresetLibrary.ImportPreset(preset);
+            Configuration.Save();
+            Log.Debug("Yay waymarks");
+        }catch (Exception ex)
+        {
+            Log.Error(ex.Message);
+        }
+    }
     protected string ProcessTextCommand_Import(string args)
     {
         if (args.Length != 1 || !uint.TryParse(args, out var gameSlotToCopy) || gameSlotToCopy < 1 || gameSlotToCopy > MemoryHandler.MaxPresetSlotNum)
