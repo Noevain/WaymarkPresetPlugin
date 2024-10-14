@@ -57,8 +57,31 @@ public sealed class WaymarkPresetLibrary
 
         return -1;
     }
+    /// <summary>
+    /// Overload meant to import preset from remote repo,importPrefix should be [name of manifest]
+    /// and will be appended to the name
+    /// </summary>
+	internal int ImportPreset(string importStr,string importPrefix)
+	{
+        try
+        {
+            var importedPreset = JsonConvert.DeserializeObject<WaymarkPreset>(importStr);
+            importedPreset.Name = "[" + importPrefix + "]" + importedPreset.Name;
+			if (importedPreset != null)
+				return ImportPreset_Common(importedPreset);
 
-    private int ImportPreset_Common(WaymarkPreset preset)
+			Plugin.Log.Warning(
+				$"Error in WaymarkPresetLibrary.ImportPreset( string ): Deserialized input resulted in a null!");
+		}
+		catch (Exception e)
+		{
+			Plugin.Log.Warning($"Error in WaymarkPresetLibrary.ImportPreset( string ):\r\n{e}");
+		}
+
+		return -1;
+	}
+
+	private int ImportPreset_Common(WaymarkPreset preset)
     {
         Presets.Add(preset);
         if (ZoneSortComparerCustom.ZoneSortOrder.Count != 0 && !ZoneSortComparerCustom.ZoneSortOrder.Contains(preset.MapID))

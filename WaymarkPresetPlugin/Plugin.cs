@@ -302,11 +302,11 @@ public class Plugin : IDalamudPlugin
 
     }
 
-    public void ProcessSubscriptionImport(string preset)
+    public void ProcessSubscriptionImport(string preset,string prefix)
     {
         try
         {
-            var tempPreset = Configuration.PresetLibrary.ImportPreset(preset);
+            var tempPreset = Configuration.PresetLibrary.ImportPreset(preset,prefix);
             Configuration.Save();
             Log.Debug("Yay waymarks");
         }catch (Exception ex)

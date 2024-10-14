@@ -60,7 +60,7 @@ namespace WaymarkPresetPlugin.Subscription
 						response.EnsureSuccessStatusCode();
 						var preset_as_str = await response.Content.ReadAsStringAsync();
 						await LibrarySemaphore.WaitAsync();//Access the library 1 at the time to prevent access errors for now
-						plugin.ProcessSubscriptionImport(preset_as_str);
+						plugin.ProcessSubscriptionImport(preset_as_str,manifest.name);
 						LibrarySemaphore.Release();
 
 						
