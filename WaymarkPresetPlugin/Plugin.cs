@@ -178,6 +178,12 @@ public class Plugin : IDalamudPlugin
             Configuration.Save();
             commandResponse = "Cleared all subscriptions";
         }
+        else if (subCommand == "clearcache")
+        {
+            Configuration.urls_to_etags.Clear();
+            Configuration.Save();
+            commandResponse = "Cleared cache";
+        }
         else if (subCommand == SubcommandSlotInfo)
         {
             commandResponse = ProcessTextCommand_SlotInfo(subCommandArgs);
