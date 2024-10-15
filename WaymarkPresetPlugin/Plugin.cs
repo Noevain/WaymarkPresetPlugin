@@ -172,6 +172,12 @@ public class Plugin : IDalamudPlugin
             SubscriptionManager.Sync("https://raw.githubusercontent.com/noevain/All-The-Waymarks/master/NA/NA.yaml");
             commandResponse = "yay";
         }
+        else if (subCommand == "clearrepos")
+        {
+            Configuration.subscribed_repos.Clear();
+            Configuration.Save();
+            commandResponse = "Cleared all subscriptions";
+        }
         else if (subCommand == SubcommandSlotInfo)
         {
             commandResponse = ProcessTextCommand_SlotInfo(subCommandArgs);
