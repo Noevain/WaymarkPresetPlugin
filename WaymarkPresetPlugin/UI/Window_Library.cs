@@ -30,6 +30,7 @@ internal sealed class WindowLibrary : IDisposable
     private readonly Configuration Configuration;
 
     private string mPresetImportString = "";
+    private string mUrlImportString = "";
 
     public string PresetImportString
     {
@@ -608,13 +609,13 @@ internal sealed class WindowLibrary : IDisposable
 
             ImGui.EndCombo();
         }
-        var repo = string.Empty;
-        ImGui.InputTextWithHint("##RemoteURLBox", "Paste a URL here and click Get", ref repo, 1024);
+        ImGui.InputTextWithHint("##RemoteURLBox", "Paste a URL here and click Get", ref mUrlImportString, 1024);
         ImGui.SameLine();
 		if (ImGui.Button("Add from URL"))
         {
-            Configuration.subscribed_repos.Add(repo);
+            Configuration.subscribed_repos.Add(mUrlImportString);
             Configuration.Save();
+            mUrlImportString = "";
         }
 
         try

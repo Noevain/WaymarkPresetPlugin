@@ -19,9 +19,12 @@ internal sealed class WindowDebug : IDisposable
 
     private readonly PluginUI mUI;
 
-    public WindowDebug(PluginUI UI)
+    private Configuration mConfiguration;
+
+    public WindowDebug(PluginUI UI,Configuration configuration)
     {
         mUI = UI;
+        mConfiguration = configuration;
     }
 
     public void Dispose() { }
@@ -60,6 +63,18 @@ internal sealed class WindowDebug : IDisposable
             ImGui.Unindent();
         }
 
+        ImGui.Text("Subscribed repos");
+        foreach(var item in mConfiguration.subscribed_repos)
+        {
+            ImGui.Text(item);
+        }
+        ImGui.Text("ETag cache");
+        foreach(var item in mConfiguration.urls_to_etags)
+        {
+            ImGui.Text(item.Key + ":");
+            ImGui.SameLine();
+            ImGui.Text(item.Value);
+        }
         //	We're done.
         ImGui.End();
     }

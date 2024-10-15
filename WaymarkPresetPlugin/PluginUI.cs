@@ -60,7 +60,7 @@ namespace WaymarkPresetPlugin
             InfoPaneWindow = new(this, configuration);
             MapWindow = new(this, configuration);
             HelpWindow = new(this, configuration, EditWaymarkCoordDragAndDropData);
-            DebugWindow = new(this);
+            DebugWindow = new(this,configuration);
             SettingsWindow = new(this, configuration);
             EditorWindow = new(this, configuration, EditWaymarkDragAndDropData);
         }
