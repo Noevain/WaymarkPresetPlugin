@@ -68,7 +68,7 @@ public sealed class WaymarkPresetLibrary
             var importedPreset = JsonConvert.DeserializeObject<WaymarkPreset>(importStr);
             importedPreset.Name = "[" + importPrefix + "]" + importedPreset.Name;
 			if (importedPreset != null)
-				return ImportPreset_Common(importedPreset);
+				return ReplaceOrCreatePreset(importedPreset);
 
 			Plugin.Log.Warning(
 				$"Error in WaymarkPresetLibrary.ImportPreset( string ): Deserialized input resulted in a null!");
@@ -126,6 +126,21 @@ public sealed class WaymarkPresetLibrary
 
         return -1;
     }
+	/// <summary>
+	/// If the given preset already exist, overwrite it, otherwise just add it to the library
+    /// this will match by name+mapID instead of == since the input preset is expected to be different than the replaced one
+	/// </summary>
+	internal int ReplaceOrCreatePreset(WaymarkPreset preset)
+    {
+        int target = Presets.FindIndex(element =>  element.Name == preset.Name && element.MapID == preset.MapID);
+        if (target == -1)//not found so create
+			return ImportPreset_Common(preset);
+
+        if(DeletePreset(target))
+            return ImportPreset_Common(preset);
+
+        throw new Exception("Existing preset found but failed to delete");
+	}
 
     internal void AddOrChangeCustomSortEntry(ushort zone, ushort placeBeforeZone = ushort.MaxValue)
     {
