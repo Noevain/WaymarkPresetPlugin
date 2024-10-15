@@ -608,6 +608,14 @@ internal sealed class WindowLibrary : IDisposable
 
             ImGui.EndCombo();
         }
+        var repo = string.Empty;
+        ImGui.InputTextWithHint("##RemoteURLBox", "Paste a URL here and click Get", ref repo, 1024);
+        ImGui.SameLine();
+		if (ImGui.Button("Add from URL"))
+        {
+            Configuration.subscribed_repos.Add(repo);
+            Configuration.Save();
+        }
 
         try
         {
