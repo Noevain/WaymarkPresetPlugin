@@ -73,7 +73,7 @@ public class Plugin : IDalamudPlugin
 			MaxConnectionsPerServer = 4 // Github won't allow more then 10 max connections
 		});
 
-        SubscriptionManager = new SubscriptionManager(new List<string>(), new System.Collections.Concurrent.ConcurrentDictionary<string, string>(), this);
+        SubscriptionManager = new SubscriptionManager(Configuration);
 		//	UI Initialization
 		PluginUI = new PluginUI(Configuration);
 
@@ -302,18 +302,7 @@ public class Plugin : IDalamudPlugin
 
     }
 
-    public void ProcessSubscriptionImport(string preset,string prefix)
-    {
-        try
-        {
-            var tempPreset = Configuration.PresetLibrary.ImportPreset(preset,prefix);
-            Configuration.Save();
-            Log.Debug("Yay waymarks");
-        }catch (Exception ex)
-        {
-            Log.Error(ex.Message);
-        }
-    }
+
     protected string ProcessTextCommand_Import(string args)
     {
         if (args.Length != 1 || !uint.TryParse(args, out var gameSlotToCopy) || gameSlotToCopy < 1 || gameSlotToCopy > MemoryHandler.MaxPresetSlotNum)

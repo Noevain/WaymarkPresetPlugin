@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CheapLoc;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,10 +13,6 @@ namespace WaymarkPresetPlugin.Subscription
 
 	public class SubscriptionManager
 	{
-		//list of urls to visit
-		public List<string> repos = null!;
-		//map urls to etags, for checking updates
-		public ConcurrentDictionary<string,string> urls_to_etags = new ConcurrentDictionary<string,string>();
 
 		public ConcurrentDictionary<string,SubscriptionTaskDetails> SubscriptionTaskDetails = new();
 
@@ -23,12 +20,10 @@ namespace WaymarkPresetPlugin.Subscription
 
 		private SemaphoreSlim LibrarySemaphore = new SemaphoreSlim(1,1);
 
-		private Plugin plugin = null!;
+		private Configuration conf = null!;
 
-		public SubscriptionManager(List<String> saved, ConcurrentDictionary<string, string> savedEtags,Plugin plugin) {
-			repos = saved;
-			urls_to_etags = savedEtags;
-			this.plugin = plugin;
+		public SubscriptionManager(Configuration conf) {
+			this.conf = conf;
 		
 		}
 
@@ -60,7 +55,7 @@ namespace WaymarkPresetPlugin.Subscription
 						response.EnsureSuccessStatusCode();
 						var preset_as_str = await response.Content.ReadAsStringAsync();
 						await LibrarySemaphore.WaitAsync();//Access the library 1 at the time to prevent access errors for now
-						plugin.ProcessSubscriptionImport(preset_as_str,manifest.name);
+						ProcessSubscriptionImport(preset_as_str,manifest.name);
 						LibrarySemaphore.Release();
 
 						
@@ -83,11 +78,11 @@ namespace WaymarkPresetPlugin.Subscription
 			});
 
 			bool hasKnownEtag = false;
-			if (urls_to_etags.ContainsKey(url) && response.Headers.ETag != null)
+			if (conf.urls_to_etags.ContainsKey(url) && response.Headers.ETag != null)
 			{
-				hasKnownEtag = urls_to_etags[url] == response.Headers.ETag.Tag;
+				hasKnownEtag = conf.urls_to_etags[url] == response.Headers.ETag.Tag;
 			}
-				urls_to_etags[url] = response.Headers.ETag.Tag;
+				conf.urls_to_etags[url] = response.Headers.ETag.Tag;
 
 			var manifestStr = await response.Content.ReadAsStringAsync();
 			var manifest = SubscriptionManifestYAML.From(manifestStr);
@@ -101,6 +96,20 @@ namespace WaymarkPresetPlugin.Subscription
 			{
 				childTask.Child("No changes - ETag match");
 				return (manifest, false);
+			}
+		}
+
+		public void ProcessSubscriptionImport(string preset, string prefix)
+		{
+			try
+			{
+				var tempPreset = conf.PresetLibrary.ImportPreset(preset, prefix);
+				conf.Save();
+				Plugin.Log.Debug("Yay waymarks");
+			}
+			catch (Exception ex)
+			{
+				Plugin.Log.Error(ex.Message);
 			}
 		}
 

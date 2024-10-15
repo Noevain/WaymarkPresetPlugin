@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using Dalamud.Configuration;
 using Newtonsoft.Json;
@@ -17,6 +19,10 @@ public class Configuration : IPluginConfiguration
 
     //  Our own configuration options and data.
     public WaymarkPresetLibrary PresetLibrary { get; protected set; } = new();
+
+    public List<string> subscribed_repos {  get; set; } = new();
+    
+    public ConcurrentDictionary<string,string> urls_to_etags { get; set; } = new();
 
     //	Need a real backing field on the following properties for use with ImGui.
     public bool mSortPresetsByZone = true;
