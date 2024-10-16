@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,20 +52,47 @@ namespace WaymarkPresetPlugin.Subscription
 					var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 4 };
 					await Parallel.ForEachAsync(manifest.waymarks, parallelOptions, async (waymark,token) =>
 					{
-						var response = await Plugin._httpClient.GetAsync(manifest.folderurl + waymark.url);
-						response.EnsureSuccessStatusCode();
-						var preset_as_str = await response.Content.ReadAsStringAsync();
-						await LibrarySemaphore.WaitAsync();//Access the library 1 at the time to prevent access errors for now
-						ProcessSubscriptionImport(preset_as_str,manifest.name);
-						LibrarySemaphore.Release();
-
-						
+						string fullurl = manifest.folderurl + waymark.url;
+						var childDetails = taskDetails.Child($"Sync {waymark.url}");
+						await SyncOrCheckWaymark(fullurl,manifest.name,childDetails);
 					});
 				});
 			}finally
 			{
 				JobSemaphore.Release();
 			}
+		}
+
+		private async Task SyncOrCheckWaymark(string url,string manifest_name,SubscriptionTaskDetails taskDetails)
+		{
+			var response = await Plugin._httpClient.GetAsync(url);
+			response.EnsureSuccessStatusCode();
+			if (conf.urls_to_etags.ContainsKey(url) && response.Headers.ETag != null)
+			{
+				if (conf.urls_to_etags[url] != response.Headers.ETag.Tag)
+				{
+					var preset_as_str = await response.Content.ReadAsStringAsync();
+					await LibrarySemaphore.WaitAsync();//Access the library 1 at the time to prevent access errors for now
+					ProcessSubscriptionImport(preset_as_str, manifest_name);
+					LibrarySemaphore.Release();
+					conf.urls_to_etags[url] = response.Headers.ETag.Tag;
+					taskDetails.Child($"Updated");
+				}
+				else
+				{
+					taskDetails.Child($"No changes");
+				}
+			}
+			else
+			{//no existing ETag
+				var preset_as_str = await response.Content.ReadAsStringAsync();
+				await LibrarySemaphore.WaitAsync();
+				ProcessSubscriptionImport(preset_as_str, manifest_name);
+				LibrarySemaphore.Release();
+				conf.urls_to_etags[url] = response.Headers.ETag.Tag;
+				taskDetails.Child($"Added");
+			}
+
 		}
 		private async Task<(SubscriptionManifestYAML, bool)> FetchManifest(string url, SubscriptionTaskDetails taskDetails)
 		{
