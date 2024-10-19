@@ -66,7 +66,7 @@ internal sealed class WindowDebug : IDisposable
         ImGui.Text("Subscribed repos");
         foreach(var item in mConfiguration.subscribed_repos)
         {
-            ImGui.Text(item);
+            ImGui.Text(item._repoUrl);
         }
         ImGui.Text("ETag cache");
         foreach(var item in mConfiguration.urls_to_etags)

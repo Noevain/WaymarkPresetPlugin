@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using Dalamud.Configuration;
 using Newtonsoft.Json;
+using WaymarkPresetPlugin.Subscription;
 
 namespace WaymarkPresetPlugin;
 
@@ -20,7 +21,7 @@ public class Configuration : IPluginConfiguration
     //  Our own configuration options and data.
     public WaymarkPresetLibrary PresetLibrary { get; protected set; } = new();
 
-    public List<string> subscribed_repos {  get; set; } = new();
+    public List<SubscriptionRepo> subscribed_repos {  get; set; } = new();
     
     public ConcurrentDictionary<string,string> urls_to_etags { get; set; } = new();
 

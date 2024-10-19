@@ -10,6 +10,7 @@ using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using Newtonsoft.Json;
+using WaymarkPresetPlugin.Subscription;
 
 namespace WaymarkPresetPlugin.UI;
 
@@ -613,11 +614,15 @@ internal sealed class WindowLibrary : IDisposable
         ImGui.SameLine();
 		if (ImGui.Button("Add from URL"))
         {
-            Configuration.subscribed_repos.Add(mUrlImportString);
+            Configuration.subscribed_repos.Add(new SubscriptionRepo(mUrlImportString));
             Configuration.Save();
             mUrlImportString = "";
         }
 
+        foreach(var item in Configuration.subscribed_repos)
+        {
+            ImGui.Text(item._repoUrl + ":" + (item._hasUpdates ? "Has updates" : "No updates") );
+        }
         try
         {
             ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetStyle().Colors[(int)ImGuiCol.Button]);
