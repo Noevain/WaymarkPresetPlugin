@@ -614,7 +614,7 @@ internal sealed class WindowLibrary : IDisposable
         ImGui.SameLine();
 		if (ImGui.Button("Add from URL"))
         {
-            Configuration.subscribed_repos.Add(new SubscriptionRepo(mUrlImportString));
+            Configuration.subscribed_repos.Add(new SubscriptionRepo(mUrlImportString, DateTime.MinValue));
             Configuration.Save();
             mUrlImportString = "";
         }
@@ -622,7 +622,27 @@ internal sealed class WindowLibrary : IDisposable
         foreach(var item in Configuration.subscribed_repos)
         {
             ImGui.Text(item._repoUrl + ":" + (item._hasUpdates ? "Has updates" : "No updates") );
-        }
+            ImGui.SameLine();
+            if(ImGui.Button("Check for updates"))
+            {
+                Plugin.SubscriptionManager.ScheduleCheckForUpdates(item);
+            }
+            ImGui.SameLine();
+            if (!item._hasUpdates)
+            {
+                ImGui.Text("Up to date");
+            }
+            else
+            {
+                if (ImGui.Button("Update"))
+                {
+                    Plugin.SubscriptionManager.Sync(item);
+                }
+            }
+            ImGui.SameLine();
+            ImGui.Text(item._lastUpdateCheck.ToShortDateString() +" at "+ item._lastUpdateCheck.ToShortTimeString());
+
+		}
         try
         {
             ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetStyle().Colors[(int)ImGuiCol.Button]);

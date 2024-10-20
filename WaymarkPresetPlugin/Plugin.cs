@@ -169,7 +169,7 @@ public class Plugin : IDalamudPlugin
         }
         else if (subCommand == "trysync")
         {
-            SubscriptionManager.Sync("https://raw.githubusercontent.com/noevain/All-The-Waymarks/master/NA/NA.yaml");
+            SubscriptionManager.Sync(new SubscriptionRepo("https://raw.githubusercontent.com/noevain/All-The-Waymarks/master/NA/NA.yaml", DateTime.MinValue));
             commandResponse = "yay";
         }
         else if (subCommand == "clearrepos")

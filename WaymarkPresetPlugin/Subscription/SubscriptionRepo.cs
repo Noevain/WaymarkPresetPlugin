@@ -12,10 +12,10 @@ namespace WaymarkPresetPlugin.Subscription
 		public bool _hasUpdates;
 		public DateTime _lastUpdateCheck;
 
-		public SubscriptionRepo(string repoUrl)
+		public SubscriptionRepo(string repoUrl,DateTime lastCheck)
 		{
 			_hasUpdates = true;
-			_lastUpdateCheck = DateTime.MinValue;
+			_lastUpdateCheck = lastCheck;
 			_repoUrl = repoUrl;
 		}
 	}
