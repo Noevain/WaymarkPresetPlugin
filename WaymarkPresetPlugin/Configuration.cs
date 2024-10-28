@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Dalamud.Configuration;
 using Newtonsoft.Json;
+using WaymarkPresetPlugin.Subscription;
 
 namespace WaymarkPresetPlugin;
 
@@ -17,6 +19,7 @@ public class Configuration : IPluginConfiguration
 
     //  Our own configuration options and data.
     public WaymarkPresetLibrary PresetLibrary { get; protected set; } = new();
+    public List<SubscriptionRepo> Subscriptions { get; protected set; } = new();
 
     //	Need a real backing field on the following properties for use with ImGui.
     public bool mSortPresetsByZone = true;

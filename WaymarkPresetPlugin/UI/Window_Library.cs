@@ -10,6 +10,7 @@ using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using Newtonsoft.Json;
+using WaymarkPresetPlugin.Subscription;
 
 namespace WaymarkPresetPlugin.UI;
 
@@ -30,6 +31,7 @@ internal sealed class WindowLibrary : IDisposable
     private readonly Configuration Configuration;
 
     private string mPresetImportString = "";
+    private string mUrlImportString = "";
 
     public string PresetImportString
     {
@@ -608,7 +610,38 @@ internal sealed class WindowLibrary : IDisposable
 
             ImGui.EndCombo();
         }
+        ImGui.InputTextWithHint("##RemoteURLBox", "Paste a URL here and click Get", ref mUrlImportString, 1024);
+        ImGui.SameLine();
+        if (ImGui.Button("Add from URL"))
+        {
+            Configuration.Subscriptions.Add(new SubscriptionRepo(mUrlImportString, DateTime.MinValue));
+            Configuration.Save();
+            mUrlImportString = "";
+        }
+        foreach(var item in Configuration.Subscriptions)
+        {
+            ImGui.Text(item.RepoUrl + ":" + (item.HasUpdates ? "Has updates" : "No updates") );
+            ImGui.SameLine();
+            if(ImGui.Button("Check for updates"))
+            {
+                //Plugin.SubscriptionManager.ScheduleCheckForUpdates(item);
+            }
+            ImGui.SameLine();
+            if (!item.HasUpdates)
+            {
+                ImGui.Text("Up to date");
+            }
+            else
+            {
+                if (ImGui.Button("Update"))
+                {
+                    //Plugin.SubscriptionManager.Sync(item);
+                }
+            }
+            ImGui.SameLine();
+            ImGui.Text(item.LastUpdateCheck.ToShortDateString() +" at "+ item.LastUpdateCheck.ToShortTimeString());
 
+        }
         try
         {
             ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetStyle().Colors[(int)ImGuiCol.Button]);
