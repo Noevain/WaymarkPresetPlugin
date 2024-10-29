@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Networking.Http;
 using System.Net.Http;
+using Newtonsoft.Json;
+
 namespace WaymarkPresetPlugin.Subscription;
 
 public class SubscriptionManager
@@ -18,8 +20,7 @@ public class SubscriptionManager
 
     public static HttpClient _httpClient { get; private set; } = null!;
     
-    private ConcurrentDictionary<string,Task> WaymarkTasks = new();
-    private ConcurrentDictionary<string, Task> SubscriptionsTasks = new();
+    private ConcurrentDictionary<string, string> status { get; } = new();
     
     private SemaphoreSlim JobSemaphore = new SemaphoreSlim(1, 1);
     private SemaphoreSlim LibraryWriterSemaphore = new SemaphoreSlim(1, 1);
@@ -56,11 +57,45 @@ public class SubscriptionManager
             }));
         
     }
-
-    public async void CheckForUpdates(SubscriptionRepo subscription)
+/// <summary>
+/// Check the given SubscriptionRepo for any updates against known ETag
+/// </summary>
+/// <param name="subscription">The SubscriptionRepo to check</param>
+/// <returns>A task object representing the CheckForUpdates process</returns>
+    public Task CheckForUpdates(SubscriptionRepo subscription)
     {
-        Plugin.Log.Debug($"Checking for updates...{subscription.RepoUrl}");
         
+        Plugin.Log.Debug($"Checking for updates...{subscription.RepoUrl}");
+        return Task.Run((async () =>
+        {
+            var (manifest, hasUpdate) = await FetchManifest(subscription.RepoUrl, false);
+            if (hasUpdate)
+            {
+                Plugin.Log.Debug($"Update found for{manifest.name}");
+            }
+            //not setting MaxDegreeOfParallelism can result in locking up all threads
+            var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 4 };
+            bool waymarkUpdates = false;
+            await Parallel.ForEachAsync(manifest.waymarks, parallelOptions, async (waymark, token) =>
+            {
+                var (waymarkStr,hasWaymarkUpdate) = await FetchWaymark(manifest.folderurl + waymark.url, false);
+                if (hasWaymarkUpdate)
+                {
+                    status[waymark.name] = "Has update";
+                    hasUpdate = true;
+                    return;
+                }
+
+                status[waymark.name] = "No update";
+                
+            });
+            Plugin.Log.Debug("Updating repo timestamp...");
+            var subscriptionIdx = Configuration.Subscriptions.IndexOf(subscription);
+            subscription.HasUpdates = hasUpdate;
+            subscription.LastUpdateCheck = DateTime.Now;
+            Configuration.Subscriptions[subscriptionIdx] = subscription;
+            Configuration.Save();
+        }));
     }
 
 /// <summary>
@@ -68,7 +103,7 @@ public class SubscriptionManager
 /// </summary>
 /// <param name="url">URL pointing to the manifest to fetch</param>
 /// <param name="updateETag">Should this operation update the ETag</param>
-/// <returns>Serialized manifest and if there is a known ETag for it, whether or not it needs to be updated </returns>
+/// <returns>Serialized manifest and if there is a known ETag for it, whether it needs to be updated </returns>
     private async Task<(SubscriptionManifestYAML,bool)> FetchManifest(string url,bool updateETag)
     {
         Plugin.Log.Debug($"Fetching manifest...{url}");
@@ -92,7 +127,7 @@ public class SubscriptionManager
 
             }
 
-            if (Configuration.url_to_etags[url] != response.Headers.ETag.Tag)
+            else if (Configuration.url_to_etags[url] != response.Headers.ETag.Tag)
             {
                 hasUpdated = true;
                 if (updateETag)
@@ -106,5 +141,48 @@ public class SubscriptionManager
 
 
         return (manifest,hasUpdated);
+    }
+/// <summary>
+/// Fetch the waymark at the given url
+/// </summary>
+/// <param name="url">URL pointing to the waymark in json format</param>
+/// <param name="updateETag">Should this operation update its ETag</param>
+/// <returns>The waymark.json as a string and if there is a known ETag for it, whether it needs to be updated</returns>
+    private async Task<(string,bool)> FetchWaymark(string url,bool updateETag)
+    {
+        Plugin.Log.Debug($"Fetching waymark...{url}");
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        var waymarkStr = await response.Content.ReadAsStringAsync();
+        bool hasUpdated = false;
+        if (response.Headers.ETag != null)
+        {
+            if (!Configuration.url_to_etags.ContainsKey(url))
+            {
+                hasUpdated = true;
+                if (updateETag)
+                {
+                    Configuration.url_to_etags[url] = response.Headers.ETag.Tag;
+                    Configuration.Save();
+                    Plugin.Log.Debug($"Waymark ETag created for {url}");
+                }
+
+            }
+
+            else if (Configuration.url_to_etags[url] != response.Headers.ETag.Tag)
+            {
+                hasUpdated = true;
+                if (updateETag)
+                {
+                    Configuration.url_to_etags[url] = response.Headers.ETag.Tag;
+                    Configuration.Save();
+                    Plugin.Log.Debug($"Waymark ETag updated for {url}");
+                }
+            }
+        }
+        return (waymarkStr,hasUpdated);
+
+
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
@@ -11,6 +12,7 @@ using CheapLoc;
 using Dalamud.Interface;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using FFXIVClientStructs.STD.Helper;
 using ImGuiNET;
 using Newtonsoft.Json;
 using WaymarkPresetPlugin.Subscription;
@@ -48,6 +50,9 @@ internal sealed class WindowLibrary : IDisposable
     
     private Task subTask = null;
     private Exception subEx = null;
+    
+    private ConcurrentDictionary<string,Task> updateTasks = new ConcurrentDictionary<string, Task>();
+    private ConcurrentDictionary<string, Exception> updateExs= new ConcurrentDictionary<string, Exception>();
     private bool FieldMarkerAddonWasOpen { get; set; } = false;
 
     private readonly IntPtr mpLibraryZoneDragAndDropData;
@@ -654,14 +659,26 @@ internal sealed class WindowLibrary : IDisposable
             case TimeoutException: ImGui.SameLine();ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), Loc.Localize("ErrorTimeOut", "Timed out")); break;
             case ArgumentException: ImGui.SameLine();ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), Loc.Localize("ErrorArgument", subEx.Message)); break;
             case DuplicateNameException: ImGui.SameLine();ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), Loc.Localize("ErrorDuplicateName", subEx.Message)); break;
+            default: ImGui.SameLine();ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), Loc.Localize("ErrorUnknown", "Unknown error")); break;
         }
         foreach(var item in Configuration.Subscriptions)
         {
-            ImGui.Text(item.RepoUrl + ":" + (item.HasUpdates ? "Has updates" : "No updates") );
+            ImGui.Text(item.Name + ":" + (item.HasUpdates ? "Has updates" : "No updates") );
             ImGui.SameLine();
             if(ImGui.Button("Check for updates"))
             {
-                //Plugin.SubscriptionManager.ScheduleCheckForUpdates(item);
+                if (!updateTasks.ContainsKey(item.Name))
+                {
+                    try
+                    {
+                        updateTasks[item.Name] = Configuration.SubscriptionManager.CheckForUpdates(item);
+                    }
+                    catch (Exception ex)
+                    {
+                        Plugin.Log.Error(ex.Message);
+                        updateExs[item.Name] = ex;
+                    }
+                }
             }
             ImGui.SameLine();
             if (!item.HasUpdates)
@@ -677,6 +694,29 @@ internal sealed class WindowLibrary : IDisposable
             }
             ImGui.SameLine();
             ImGui.Text(item.LastUpdateCheck.ToShortDateString() +" at "+ item.LastUpdateCheck.ToShortTimeString());
+            if (updateTasks.ContainsKey(item.Name) && updateTasks[item.Name] != null)
+            {
+                if (!updateTasks[item.Name].IsCompleted)
+                {
+                    ImGui.SameLine();
+                    ImGui.Text(Loc.Localize("UpdateInProgress", "Checking..."));
+                }
+                else if(updateTasks[item.Name].IsFaulted)
+                {
+                    switch (updateExs[item.Name])
+                    {
+                        case null: break;
+                        case HttpRequestException: ImGui.SameLine();ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), Loc.Localize("ErrorReqFailed", "Request Failed")); break;
+                        case TimeoutException: ImGui.SameLine();ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), Loc.Localize("ErrorTimeOut", "Timed out")); break;
+                        default: ImGui.SameLine();ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), Loc.Localize("ErrorUnknown", "Unknown error")); break;
+                    }
+                }
+                else
+                {
+                    updateTasks.TryRemove(item.Name, out _);
+                    updateExs.TryRemove(item.Name, out _);
+                }
+            }
 
         }
         try
