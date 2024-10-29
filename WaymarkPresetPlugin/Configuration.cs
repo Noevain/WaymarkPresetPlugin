@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using Dalamud.Configuration;
@@ -15,11 +16,17 @@ public class Configuration : IPluginConfiguration
     public Configuration()
     {
         GetZoneNameDelegate = GetZoneNameHelperFunc;
+        this.SubscriptionManager = new SubscriptionManager(this);
     }
 
     //  Our own configuration options and data.
     public WaymarkPresetLibrary PresetLibrary { get; protected set; } = new();
+
+    [JsonIgnore]
+    public SubscriptionManager SubscriptionManager { get; protected set; }
     public List<SubscriptionRepo> Subscriptions { get; protected set; } = new();
+    
+    public ConcurrentDictionary<string,string> url_to_etags { get; set; } = new();
 
     //	Need a real backing field on the following properties for use with ImGui.
     public bool mSortPresetsByZone = true;

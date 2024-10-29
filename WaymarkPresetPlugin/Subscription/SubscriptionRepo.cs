@@ -8,13 +8,15 @@ namespace WaymarkPresetPlugin.Subscription
 {
     public struct SubscriptionRepo
     {
+        public string Name { get; set; }
         public string RepoUrl;
         public bool HasUpdates;
         public DateTime LastUpdateCheck;
         public string LastKnownManifestETag;
 
-        public SubscriptionRepo(string repoUrl,DateTime lastCheck)
+        public SubscriptionRepo(string name,string repoUrl,DateTime lastCheck)
         {
+            Name = name;
             HasUpdates = true;
             LastUpdateCheck = lastCheck;
             RepoUrl = repoUrl;

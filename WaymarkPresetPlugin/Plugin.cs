@@ -12,6 +12,7 @@ using Dalamud.Utility;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using ImGuiNET;
 using Newtonsoft.Json;
+using WaymarkPresetPlugin.Subscription;
 
 namespace WaymarkPresetPlugin;
 
@@ -55,7 +56,6 @@ public class Plugin : IDalamudPlugin
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
         ZoneInfoHandler.Init();
-
         //	UI Initialization
         PluginUI = new PluginUI(Configuration);
 

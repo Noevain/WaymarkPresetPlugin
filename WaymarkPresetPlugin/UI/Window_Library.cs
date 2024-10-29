@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using CheapLoc;
 using Dalamud.Interface;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
@@ -42,7 +45,9 @@ internal sealed class WindowLibrary : IDisposable
     public int SelectedPreset { get; private set; } = -1;
 
     private uint mGameSlotDropdownSelection = 1;
-
+    
+    private Task subTask = null;
+    private Exception subEx = null;
     private bool FieldMarkerAddonWasOpen { get; set; } = false;
 
     private readonly IntPtr mpLibraryZoneDragAndDropData;
@@ -610,13 +615,45 @@ internal sealed class WindowLibrary : IDisposable
 
             ImGui.EndCombo();
         }
-        ImGui.InputTextWithHint("##RemoteURLBox", "Paste a URL here and click Get", ref mUrlImportString, 1024);
+        ImGui.InputTextWithHint("###RemoteURLInput", "Paste a URL here and click Get", ref mUrlImportString, 1024);
         ImGui.SameLine();
         if (ImGui.Button("Add from URL"))
         {
-            Configuration.Subscriptions.Add(new SubscriptionRepo(mUrlImportString, DateTime.MinValue));
-            Configuration.Save();
-            mUrlImportString = "";
+            if (subTask is null)
+            {
+                try
+                {
+                    subTask = Configuration.SubscriptionManager.Subscribe(mUrlImportString);
+                }
+                catch(Exception ex)
+                {
+                    Plugin.Log.Error(ex.Message);
+                    subEx = ex;
+                }
+            }
+        }
+
+        if (subTask != null)
+        {
+            if (!subTask.IsCompleted)
+            {
+                ImGui.SameLine();
+                ImGui.Text("Loading URL...");
+            }
+            else
+            {
+                subTask = null;
+                subEx = null;
+            }
+        }
+
+        switch (subEx)
+        {
+            case null: break;
+            case HttpRequestException: ImGui.SameLine();ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), Loc.Localize("ErrorReqFailed", "Request Failed")); break;
+            case TimeoutException: ImGui.SameLine();ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), Loc.Localize("ErrorTimeOut", "Timed out")); break;
+            case ArgumentException: ImGui.SameLine();ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), Loc.Localize("ErrorArgument", subEx.Message)); break;
+            case DuplicateNameException: ImGui.SameLine();ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), Loc.Localize("ErrorDuplicateName", subEx.Message)); break;
         }
         foreach(var item in Configuration.Subscriptions)
         {
