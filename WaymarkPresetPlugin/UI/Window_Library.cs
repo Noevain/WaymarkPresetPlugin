@@ -663,7 +663,7 @@ internal sealed class WindowLibrary : IDisposable
         }
         foreach(var item in Configuration.Subscriptions)
         {
-            ImGui.Text(item.Name + ":" + (item.HasUpdates ? "Has updates" : "No updates") );
+            ImGui.Text(item.Name);
             ImGui.SameLine();
             if(ImGui.Button("Check for updates"))
             {
@@ -704,7 +704,7 @@ internal sealed class WindowLibrary : IDisposable
                 }
             }
             ImGui.SameLine();
-            ImGui.Text(item.LastUpdateCheck.ToShortDateString() +" at "+ item.LastUpdateCheck.ToShortTimeString());
+            ImGui.Text("Last check:"+item.LastUpdateCheck.ToShortDateString() +" at "+ item.LastUpdateCheck.ToShortTimeString());
             if (updateTasks.ContainsKey(item.Name) && updateTasks[item.Name] != null)
             {
                 if (!updateTasks[item.Name].IsCompleted)

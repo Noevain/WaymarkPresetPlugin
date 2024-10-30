@@ -64,6 +64,19 @@ internal sealed class WindowSettings : IDisposable
             ImGuiUtils.HelpMarker(Loc.Localize("Help: Autoload presets from Library", "Automatically loads the first five presets that exist in the library for a zone when you load into it.  THIS WILL OVERWRITE THE GAME'S SLOTS WITHOUT WARNING, so please do not turn this on until you are certain that you have saved any data that you want to keep.  Consider using this with the auto-import option below to reduce the risk of inadvertent preset loss."));
             ImGui.Checkbox(Loc.Localize("Config Option: Autosave Presets to Library", "Autosave presets to library.") + "###Autosave Presets to Library Checkbox", ref Configuration.mAutoSavePresetsOnInstanceLeave);
             ImGuiUtils.HelpMarker(Loc.Localize("Help: Autosave Presets to Library", "Automatically copies any populated game preset slots into the library upon exiting an instance."));
+            ImGui.Checkbox(Loc.Localize("Config Option: Autocheck for Updates","Check for updates automatically") + "###Autocheck for updates checkbox", ref Configuration.mAutoCheckForUpdates);
+            ImGuiUtils.HelpMarker(Loc.Localize("Help: Automatically check for updates every X minutes", "Automatically check for updates according to the below value in minutes. This will NOT update automatically,it will just check. Press the update button to update"));
+            int minutesBetweenAutoUpdateCheck = Configuration.MinuteBetweenAutoCheckForUpdates;
+            string buffer = minutesBetweenAutoUpdateCheck.ToString();
+            ImGui.SetNextItemWidth(100);
+            if (ImGui.InputText("Time in minutes between auto-update check", ref buffer, 255,
+                    ImGuiInputTextFlags.CharsDecimal))
+            {
+                if (int.TryParse(buffer, out var parsedInt))
+                {
+                    Configuration.MinuteBetweenAutoCheckForUpdates = Math.Clamp(parsedInt,1,600);
+                }
+            }
             ImGui.Checkbox(Loc.Localize("Config Option: Suppress Text Command Responses", "Suppress responses to text commands (besides \"{0}\").").Format(Plugin.SubcommandHelp) + "###Suppress Command Responses Checkbox", ref Configuration.mSuppressCommandLineResponses);
             ImGui.Spacing();
             if (ImGui.Button(Loc.Localize("Button: Clear All Map View Data", "Clear All Map View Data") + "###Clear All Map View Data Button"))

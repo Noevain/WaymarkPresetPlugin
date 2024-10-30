@@ -9,10 +9,12 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility;
+using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using ImGuiNET;
 using Newtonsoft.Json;
 using WaymarkPresetPlugin.Subscription;
+using Task = System.Threading.Tasks.Task;
 
 namespace WaymarkPresetPlugin;
 
@@ -26,6 +28,7 @@ public class Plugin : IDalamudPlugin
     [PluginService] public static IChatGui ChatGui { get; private set; } = null!;
     [PluginService] public static IGameGui GameGui { get; private set; } = null!;
     [PluginService] public static ISigScanner SigScanner { get; private set; } = null!;
+    [PluginService] public static IFramework Framework { get; private set; } = null!;
     [PluginService] public static IPluginLog Log { get; private set; } = null!;
     [PluginService] public static ICondition Condition { get; private set; } = null!;
 
@@ -46,6 +49,9 @@ public class Plugin : IDalamudPlugin
     public ushort CurrentTerritoryTypeID { get; protected set; }
     protected Configuration Configuration;
     protected PluginUI PluginUI;
+    
+    private DateTimeOffset? lastAutoCheckTime = null;
+    private DateTimeOffset? nextAutoCheckTime = null;
 
     public Plugin()
     {
@@ -64,9 +70,33 @@ public class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
         PluginInterface.LanguageChanged += OnLanguageChanged;
         ClientState.TerritoryChanged += OnTerritoryChanged;
+        Framework.Update += OnFrameworkUpdate;
 
         //	IPC
         IpcProvider.RegisterIPC(this);
+    }
+
+    private void OnFrameworkUpdate(IFramework framework)
+    {
+        if (!Configuration.AutoCheckForUpdates) return;
+        if (Configuration.Subscriptions.Count == 0) return;
+        if (nextAutoCheckTime == null) return;
+
+        if (DateTimeOffset.Now > nextAutoCheckTime)
+        {
+            Plugin.Log.Info("Auto-checking for updates");
+            foreach (var subscription in Configuration.Subscriptions)
+            {
+                if (subscription.HasUpdates) continue;
+                Task.Run((() =>
+                {
+                    Configuration.SubscriptionManager.CheckForUpdates(subscription,false);
+                }));
+            }
+            lastAutoCheckTime = DateTimeOffset.Now;
+            nextAutoCheckTime =
+                nextAutoCheckTime + TimeSpan.FromMinutes(Configuration.MinuteBetweenAutoCheckForUpdates);
+        }
     }
 
     //	Cleanup

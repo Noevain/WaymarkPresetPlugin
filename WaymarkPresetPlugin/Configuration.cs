@@ -27,7 +27,6 @@ public class Configuration : IPluginConfiguration
     public List<SubscriptionRepo> Subscriptions { get; protected set; } = new();
     
     public ConcurrentDictionary<string,string> url_to_etags { get; set; } = new();
-
     //	Need a real backing field on the following properties for use with ImGui.
     public bool mSortPresetsByZone = true;
 
@@ -51,6 +50,22 @@ public class Configuration : IPluginConfiguration
     {
         get { return mAllowUnselectPreset; }
         set { mAllowUnselectPreset = value; }
+    }
+    
+    public bool mAutoCheckForUpdates = true;
+
+    public bool AutoCheckForUpdates
+    {
+        get { return mAutoCheckForUpdates; }
+        set { mAutoCheckForUpdates = value; }
+    }
+
+    public int _minutesBetweenAutoCheckForUpdates = 120;
+
+    public int MinuteBetweenAutoCheckForUpdates
+    {
+        get { return _minutesBetweenAutoCheckForUpdates; }
+        set { _minutesBetweenAutoCheckForUpdates = value; }
     }
 
     public bool mFilterOnCurrentZone = false;
