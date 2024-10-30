@@ -671,7 +671,7 @@ internal sealed class WindowLibrary : IDisposable
                 {
                     try
                     {
-                        updateTasks[item.Name] = Configuration.SubscriptionManager.CheckForUpdates(item);
+                        updateTasks[item.Name] = Configuration.SubscriptionManager.CheckForUpdates(item,false);
                     }
                     catch (Exception ex)
                     {
@@ -689,7 +689,18 @@ internal sealed class WindowLibrary : IDisposable
             {
                 if (ImGui.Button("Update"))
                 {
-                    //Plugin.SubscriptionManager.Sync(item);
+                    if (!updateTasks.ContainsKey(item.Name))
+                    {
+                        try
+                        {
+                            updateTasks[item.Name] = Configuration.SubscriptionManager.CheckForUpdates(item,true);
+                        }
+                        catch (Exception ex)
+                        {
+                            Plugin.Log.Error(ex.Message);
+                            updateExs[item.Name] = ex;
+                        }
+                    }
                 }
             }
             ImGui.SameLine();
