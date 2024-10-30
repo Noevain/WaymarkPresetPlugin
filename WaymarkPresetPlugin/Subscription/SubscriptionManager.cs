@@ -61,28 +61,42 @@ public class SubscriptionManager
 /// Check the given SubscriptionRepo for any updates against known ETag
 /// </summary>
 /// <param name="subscription">The SubscriptionRepo to check</param>
+/// <param name="shouldUpdate">Should the operation update the manifest and associated waymarks</param>
 /// <returns>A task object representing the CheckForUpdates process</returns>
-    public Task CheckForUpdates(SubscriptionRepo subscription)
+    public Task CheckForUpdates(SubscriptionRepo subscription,bool shouldUpdate)
     {
         
         Plugin.Log.Debug($"Checking for updates...{subscription.RepoUrl}");
         return Task.Run((async () =>
         {
-            var (manifest, hasUpdate) = await FetchManifest(subscription.RepoUrl, false);
+            var (manifest, hasUpdate) = await FetchManifest(subscription.RepoUrl, shouldUpdate);
             if (hasUpdate)
             {
                 Plugin.Log.Debug($"Update found for{manifest.name}");
             }
             //not setting MaxDegreeOfParallelism can result in locking up all threads
             var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 4 };
-            bool waymarkUpdates = false;
+            bool hasErrored = false;
             await Parallel.ForEachAsync(manifest.waymarks, parallelOptions, async (waymark, token) =>
             {
-                var (waymarkStr,hasWaymarkUpdate) = await FetchWaymark(manifest.folderurl + waymark.url, false);
+                var (waymarkStr,hasWaymarkUpdate) = await FetchWaymark(manifest.folderurl + waymark.url, shouldUpdate);
                 if (hasWaymarkUpdate)
                 {
                     status[waymark.name] = "Has update";
                     hasUpdate = true;
+                    if (shouldUpdate)
+                    {
+                        try
+                        {
+                            Plugin.Log.Debug($"Starting update for {waymark.name}");
+                            Configuration.PresetLibrary.ImportPreset(waymarkStr,manifest.name);
+                        }
+                        catch (Exception ex)
+                        {
+                            Plugin.Log.Error($"Failed update for {waymark.name}, exception: {ex}");
+                            hasErrored = true;
+                        }
+                    }
                     return;
                 }
 
@@ -91,7 +105,11 @@ public class SubscriptionManager
             });
             Plugin.Log.Debug("Updating repo timestamp...");
             var subscriptionIdx = Configuration.Subscriptions.IndexOf(subscription);
-            subscription.HasUpdates = hasUpdate;
+            //if there was an error we want to leave the update button enabled so we can try again
+            if (hasUpdate && shouldUpdate && !hasErrored)
+                subscription.HasUpdates = false;//we just updated them
+            else
+                subscription.HasUpdates = hasUpdate;
             subscription.LastUpdateCheck = DateTime.Now;
             Configuration.Subscriptions[subscriptionIdx] = subscription;
             Configuration.Save();
@@ -121,7 +139,6 @@ public class SubscriptionManager
                 if (updateETag)
                 {
                     Configuration.url_to_etags[url] = response.Headers.ETag.Tag;
-                    Configuration.Save();
                     Plugin.Log.Debug($"Manifest ETag created for {url}");
                 }
 
@@ -133,7 +150,6 @@ public class SubscriptionManager
                 if (updateETag)
                 {
                     Configuration.url_to_etags[url] = response.Headers.ETag.Tag;
-                    Configuration.Save();
                     Plugin.Log.Debug($"Manifest ETag updated for {url}");
                 }
             }
@@ -164,7 +180,6 @@ public class SubscriptionManager
                 if (updateETag)
                 {
                     Configuration.url_to_etags[url] = response.Headers.ETag.Tag;
-                    Configuration.Save();
                     Plugin.Log.Debug($"Waymark ETag created for {url}");
                 }
 
@@ -176,13 +191,10 @@ public class SubscriptionManager
                 if (updateETag)
                 {
                     Configuration.url_to_etags[url] = response.Headers.ETag.Tag;
-                    Configuration.Save();
                     Plugin.Log.Debug($"Waymark ETag updated for {url}");
                 }
             }
         }
         return (waymarkStr,hasUpdated);
-
-
     }
 }
