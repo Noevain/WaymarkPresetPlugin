@@ -28,7 +28,7 @@ namespace WaymarkPresetPlugin
         internal readonly IntPtr EditWaymarkDragAndDropData;
         internal readonly IntPtr EditWaymarkCoordDragAndDropData;
 
-        public PluginUI(Configuration configuration)
+        public PluginUI(Plugin plugin,Configuration configuration)
         {
             //	Allocate drag and drop memory.
             LibraryZoneDragAndDropData = Marshal.AllocHGlobal(sizeof(uint));
@@ -56,7 +56,7 @@ namespace WaymarkPresetPlugin
             WaymarkIconTextures[7] ??= Plugin.Texture.GetFromGameIcon(61248).RentAsync().Result; //4
 
             //	Make child windows.
-            LibraryWindow = new(this, configuration, LibraryZoneDragAndDropData, LibraryPresetDragAndDropData);
+            LibraryWindow = new(plugin,this, configuration, LibraryZoneDragAndDropData, LibraryPresetDragAndDropData);
             InfoPaneWindow = new(this, configuration);
             MapWindow = new(this, configuration);
             HelpWindow = new(this, configuration, EditWaymarkCoordDragAndDropData);

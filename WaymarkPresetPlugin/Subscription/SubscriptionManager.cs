@@ -20,10 +20,8 @@ public class SubscriptionManager
 
     public static HttpClient _httpClient { get; private set; } = null!;
     
-    private ConcurrentDictionary<string, string> status { get; } = new();
+    public ConcurrentDictionary<string, string> status { get; } = new();
     
-    private SemaphoreSlim JobSemaphore = new SemaphoreSlim(1, 1);
-    private SemaphoreSlim LibraryWriterSemaphore = new SemaphoreSlim(1, 1);
 
     public SubscriptionManager(Configuration configuration)
     {
@@ -42,7 +40,7 @@ public class SubscriptionManager
 /// <param name="url">URL to sub to</param>
 /// <returns>A task object representing the subscription process</returns>
 /// <exception cref="ArgumentException">Thrown if URL already exist or is not an http or https link</exception>
-    public Task Subscribe(string url)
+    public Task Subscribe(string url,CancellationToken token)
     {
         if(Configuration.Subscriptions.Any(repo => repo.RepoUrl == url))
             throw new DuplicateNameException($"Subscription URL {url} already exists.");
@@ -54,7 +52,7 @@ public class SubscriptionManager
                 SubscriptionRepo repo = new SubscriptionRepo(manifest.name,url,DateTime.MinValue);
                 Configuration.Subscriptions.Add(repo);
                 Configuration.Save();
-            }));
+            }),token);
         
     }
 /// <summary>
@@ -63,7 +61,7 @@ public class SubscriptionManager
 /// <param name="subscription">The SubscriptionRepo to check</param>
 /// <param name="shouldUpdate">Should the operation update the manifest and associated waymarks</param>
 /// <returns>A task object representing the CheckForUpdates process</returns>
-    public Task CheckForUpdates(SubscriptionRepo subscription,bool shouldUpdate)
+    public Task CheckForUpdates(SubscriptionRepo subscription,bool shouldUpdate,CancellationToken cancellationToken)
     {
         
         Plugin.Log.Debug($"Checking for updates...{subscription.RepoUrl}");

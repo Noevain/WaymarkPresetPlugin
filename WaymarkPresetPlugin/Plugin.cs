@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using CheapLoc;
 using Dalamud.Game;
 using Dalamud.Game.Command;
@@ -50,9 +52,10 @@ public class Plugin : IDalamudPlugin
     protected Configuration Configuration;
     protected PluginUI PluginUI;
     
-    private DateTimeOffset? lastAutoCheckTime = null;
     private DateTimeOffset? nextAutoCheckTime = null;
-
+    public Task autoUpdateTask = null;
+    private CancellationTokenSource _cancellationUpdateCheck = new();
+    
     public Plugin()
     {
         //	Localization and Command Initialization
@@ -61,9 +64,24 @@ public class Plugin : IDalamudPlugin
         //	Configuration
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
+        if (Configuration.AutoCheckForUpdates)
+        {
+            nextAutoCheckTime = DateTimeOffset.UtcNow.AddMinutes(Configuration.MinuteBetweenAutoCheckForUpdates);
+            autoUpdateTask = Framework.Run(() =>
+            {
+                if (Configuration.Subscriptions.Count > 0)
+                {
+                    foreach (var subscription in Configuration.Subscriptions)
+                    {
+                        Configuration.SubscriptionManager.CheckForUpdates(subscription, false,_cancellationUpdateCheck.Token);
+                    }
+                }
+            }, _cancellationUpdateCheck.Token);
+        }
+
         ZoneInfoHandler.Init();
         //	UI Initialization
-        PluginUI = new PluginUI(Configuration);
+        PluginUI = new PluginUI(this,Configuration);
 
         //	Event Subscription
         PluginInterface.UiBuilder.Draw += DrawUI;
@@ -81,19 +99,18 @@ public class Plugin : IDalamudPlugin
         if (!Configuration.AutoCheckForUpdates) return;
         if (Configuration.Subscriptions.Count == 0) return;
         if (nextAutoCheckTime == null) return;
-
+        if (autoUpdateTask != null && !(autoUpdateTask.IsCompleted || autoUpdateTask.IsFaulted)) return;
         if (DateTimeOffset.Now > nextAutoCheckTime)
         {
             Plugin.Log.Info("Auto-checking for updates");
             foreach (var subscription in Configuration.Subscriptions)
             {
                 if (subscription.HasUpdates) continue;
-                Task.Run((() =>
+               autoUpdateTask = Framework.Run((() =>
                 {
-                    Configuration.SubscriptionManager.CheckForUpdates(subscription,false);
-                }));
+                    Configuration.SubscriptionManager.CheckForUpdates(subscription,false,_cancellationUpdateCheck.Token);
+                }),_cancellationUpdateCheck.Token);
             }
-            lastAutoCheckTime = DateTimeOffset.Now;
             nextAutoCheckTime =
                 nextAutoCheckTime + TimeSpan.FromMinutes(Configuration.MinuteBetweenAutoCheckForUpdates);
         }
@@ -102,6 +119,7 @@ public class Plugin : IDalamudPlugin
     //	Cleanup
     public void Dispose()
     {
+        _cancellationUpdateCheck.Cancel();
         IpcProvider.UnregisterIPC();
         Commands.RemoveHandler(TextCommandName);
 

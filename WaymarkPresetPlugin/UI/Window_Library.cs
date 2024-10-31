@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using CheapLoc;
 using Dalamud.Interface;
@@ -32,6 +33,7 @@ internal sealed class WindowLibrary : IDisposable
     public Vector2 WindowPos { get; private set; }
     public Vector2 WindowSize { get; private set; }
 
+    private readonly Plugin Plugin;
     private readonly PluginUI PluginUI;
     private readonly Configuration Configuration;
 
@@ -48,6 +50,7 @@ internal sealed class WindowLibrary : IDisposable
 
     private uint mGameSlotDropdownSelection = 1;
     
+    private CancellationTokenSource updatesCancellationTokenSource = new();
     private Task subTask = null;
     private Exception subEx = null;
     
@@ -63,8 +66,9 @@ internal sealed class WindowLibrary : IDisposable
 
     internal const string mZoneSortDataFileName_v1 = "LibraryZoneSortData_v1.json";
 
-    public WindowLibrary(PluginUI UI, Configuration configuration, IntPtr pLibraryZoneDragAndDropData, IntPtr pLibraryPresetDragAndDropData)
+    public WindowLibrary(Plugin plugin,PluginUI UI, Configuration configuration, IntPtr pLibraryZoneDragAndDropData, IntPtr pLibraryPresetDragAndDropData)
     {
+        Plugin = plugin;
         PluginUI = UI;
         Configuration = configuration;
         mpLibraryZoneDragAndDropData = pLibraryZoneDragAndDropData;
@@ -94,6 +98,7 @@ internal sealed class WindowLibrary : IDisposable
 
     public void Dispose()
     {
+        updatesCancellationTokenSource.Cancel();
         //	Try to save off the zone sort data if we have any.
         WriteZoneSortDataToFile();
     }
@@ -313,7 +318,10 @@ internal sealed class WindowLibrary : IDisposable
         var indices = zonePresets.Value;
         for (var i = 0; i < indices.Count; ++i)
         {
-            if (ImGui.Selectable($"{Configuration.PresetLibrary.Presets[indices[i]].Name}{(Configuration.ShowLibraryIndexInPresetInfo ? " (" + indices[i].ToString() + ")" : "")}###_Preset_{indices[i]}", indices[i] == SelectedPreset, ImGuiSelectableFlags.AllowDoubleClick))
+            var label =
+                $"{Configuration.PresetLibrary.Presets[indices[i]].Name}{(Configuration.ShowLibraryIndexInPresetInfo ? " (" + indices[i].ToString() + ")" : "")}###_Preset_{indices[i]}";
+            label = label + (Configuration.SubscriptionManager.status.TryGetValue(Configuration.PresetLibrary.Presets[indices[i]].Name,out var status) ? $" ({status})" : ""); 
+            if (ImGui.Selectable(label, indices[i] == SelectedPreset, ImGuiSelectableFlags.AllowDoubleClick))
             {
                 //	It's probably a bad idea to allow the selection to change when a preset's being edited.
                 if (!PluginUI.EditorWindow.EditingPreset)
@@ -628,7 +636,7 @@ internal sealed class WindowLibrary : IDisposable
             {
                 try
                 {
-                    subTask = Configuration.SubscriptionManager.Subscribe(mUrlImportString);
+                    subTask = Configuration.SubscriptionManager.Subscribe(mUrlImportString,updatesCancellationTokenSource.Token);
                 }
                 catch(Exception ex)
                 {
@@ -667,11 +675,11 @@ internal sealed class WindowLibrary : IDisposable
             ImGui.SameLine();
             if(ImGui.Button("Check for updates"))
             {
-                if (!updateTasks.ContainsKey(item.Name))
+                if (!updateTasks.ContainsKey(item.Name) && Plugin.autoUpdateTask.Status != TaskStatus.RanToCompletion)
                 {
                     try
                     {
-                        updateTasks[item.Name] = Configuration.SubscriptionManager.CheckForUpdates(item,false);
+                        updateTasks[item.Name] = Configuration.SubscriptionManager.CheckForUpdates(item,false,updatesCancellationTokenSource.Token);
                     }
                     catch (Exception ex)
                     {
@@ -689,11 +697,11 @@ internal sealed class WindowLibrary : IDisposable
             {
                 if (ImGui.Button("Update"))
                 {
-                    if (!updateTasks.ContainsKey(item.Name))
+                    if (!updateTasks.ContainsKey(item.Name) && Plugin.autoUpdateTask.Status != TaskStatus.RanToCompletion)
                     {
                         try
                         {
-                            updateTasks[item.Name] = Configuration.SubscriptionManager.CheckForUpdates(item,true);
+                            updateTasks[item.Name] = Configuration.SubscriptionManager.CheckForUpdates(item,true,updatesCancellationTokenSource.Token);
                         }
                         catch (Exception ex)
                         {
