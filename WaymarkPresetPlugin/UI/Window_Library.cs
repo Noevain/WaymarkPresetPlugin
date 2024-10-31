@@ -675,7 +675,7 @@ internal sealed class WindowLibrary : IDisposable
             ImGui.SameLine();
             if(ImGui.Button("Check for updates"))
             {
-                if (!updateTasks.ContainsKey(item.Name) && Plugin.autoUpdateTask.Status != TaskStatus.RanToCompletion)
+                if (!updateTasks.ContainsKey(item.Name) && (Plugin.autoUpdateTask != null && Plugin.autoUpdateTask.Status == TaskStatus.RanToCompletion))
                 {
                     try
                     {
@@ -697,7 +697,7 @@ internal sealed class WindowLibrary : IDisposable
             {
                 if (ImGui.Button("Update"))
                 {
-                    if (!updateTasks.ContainsKey(item.Name) && Plugin.autoUpdateTask.Status != TaskStatus.RanToCompletion)
+                    if (!updateTasks.ContainsKey(item.Name) && (Plugin.autoUpdateTask != null && Plugin.autoUpdateTask.Status == TaskStatus.RanToCompletion))
                     {
                         try
                         {
