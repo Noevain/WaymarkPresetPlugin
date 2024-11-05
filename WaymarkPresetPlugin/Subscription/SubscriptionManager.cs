@@ -195,4 +195,14 @@ public class SubscriptionManager
         }
         return (waymarkStr,hasUpdated);
     }
+/// <summary>
+/// Make a name to be used for storing in the library,in case we need to change the format easily
+/// </summary>
+/// <param name="name">Name of the waymark</param>
+/// <param name="prefix">Prefix to use,should be name of the manifest</param>
+/// <returns>The name+prefix formated</returns>
+    public static string MakeName(string name, string prefix)
+    {
+        return "[" + prefix + "]" + name;
+    }
 }

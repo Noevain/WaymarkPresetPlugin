@@ -64,7 +64,7 @@ public sealed class WaymarkPresetLibrary
             var importedPreset = JsonConvert.DeserializeObject<WaymarkPreset>(importStr);
             if (importedPreset != null)
             {
-                importedPreset.Name = "[" + importPrefix + "]" + importedPreset.Name;
+                importedPreset.Name = Subscription.SubscriptionManager.MakeName(importedPreset.Name, importPrefix);
                 return CreateOrReplacePreset(importedPreset);
             }
 
