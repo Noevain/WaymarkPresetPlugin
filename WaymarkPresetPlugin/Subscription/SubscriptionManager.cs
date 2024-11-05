@@ -20,7 +20,7 @@ public class SubscriptionManager
 
     public static HttpClient _httpClient { get; private set; } = null!;
     
-    public ConcurrentDictionary<string, string> status { get; } = new();
+    public ConcurrentDictionary<int, string> status { get; } = new();
     
 
     public SubscriptionManager(Configuration configuration)
@@ -78,16 +78,26 @@ public class SubscriptionManager
             await Parallel.ForEachAsync(manifest.waymarks, parallelOptions, async (waymark, token) =>
             {
                 var (waymarkStr,hasWaymarkUpdate) = await FetchWaymark(manifest.folderurl + waymark.url, shouldUpdate);
+                var importedPreset = JsonConvert.DeserializeObject<WaymarkPreset>(waymarkStr);
+                if (importedPreset == null)
+                {
+                    hasErrored = true;
+                    Plugin.Log.Warning(
+                        $"Error while checking {waymark.url} , waymark: Deserialized input resulted in a null!");
+                    return;
+                }
                 if (hasWaymarkUpdate)
                 {
-                    status[waymark.name] = "Has update";
                     hasUpdate = true;
+                    //if this fails anyway this will overwrite the -1 key but since the waymark is not in the library we dont care
+                    status[Configuration.PresetLibrary.GetIndiceOfPresetIfExists(importedPreset)] = "Has update";
                     if (shouldUpdate)
                     {
                         try
                         {
-                            Plugin.Log.Debug($"Starting update for {waymark.name}");
-                            Configuration.PresetLibrary.ImportPreset(waymarkStr,manifest.name);
+                            Plugin.Log.Debug($"Starting update for {importedPreset.Name}");
+                            int idx = Configuration.PresetLibrary.ImportPreset(importedPreset,manifest.name);
+                            status[idx] = "Updated";
                         }
                         catch (Exception ex)
                         {
@@ -98,7 +108,7 @@ public class SubscriptionManager
                     return;
                 }
 
-                status[waymark.name] = "No update";
+                status[Configuration.PresetLibrary.GetIndiceOfPresetIfExists(importedPreset)] = "No update";
                 
             });
             Plugin.Log.Debug("Updating repo timestamp...");

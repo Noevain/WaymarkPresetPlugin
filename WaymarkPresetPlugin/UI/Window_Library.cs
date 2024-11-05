@@ -319,8 +319,9 @@ internal sealed class WindowLibrary : IDisposable
         for (var i = 0; i < indices.Count; ++i)
         {
             var label =
-                $"{Configuration.PresetLibrary.Presets[indices[i]].Name}{(Configuration.ShowLibraryIndexInPresetInfo ? " (" + indices[i].ToString() + ")" : "")}###_Preset_{indices[i]}";
-            label = label + (Configuration.SubscriptionManager.status.TryGetValue(Configuration.PresetLibrary.Presets[indices[i]].Name,out var status) ? $" ({status})" : ""); 
+                $"{Configuration.PresetLibrary.Presets[indices[i]].Name}{(Configuration.ShowLibraryIndexInPresetInfo ? " (" + indices[i].ToString() + ")" : "")}";
+            label += (Configuration.SubscriptionManager.status.TryGetValue(indices[i],out var status) ? $" ({status})" : "");
+            label += $"###_Preset_{indices[i]}";
             if (ImGui.Selectable(label, indices[i] == SelectedPreset, ImGuiSelectableFlags.AllowDoubleClick))
             {
                 //	It's probably a bad idea to allow the selection to change when a preset's being edited.
@@ -419,7 +420,11 @@ internal sealed class WindowLibrary : IDisposable
             if (!Configuration.FilterOnCurrentZone || Configuration.PresetLibrary.Presets[i].MapID == ZoneInfoHandler.GetContentFinderIDFromTerritoryTypeID(Plugin.ClientState.TerritoryType))
             {
                 anyPresetsVisibleWithCurrentFilters = true;
-                if (ImGui.Selectable($"{Configuration.PresetLibrary.Presets[i].Name}{(Configuration.ShowLibraryIndexInPresetInfo ? " (" + i.ToString() + ")" : "")}###_Preset_{i}", i == SelectedPreset, ImGuiSelectableFlags.AllowDoubleClick))
+                var label =
+                    $"{Configuration.PresetLibrary.Presets[i].Name}{(Configuration.ShowLibraryIndexInPresetInfo ? " (" + i.ToString() + ")" : "")}";
+                label += (Configuration.SubscriptionManager.status.TryGetValue(i,out var status) ? $" ({status})" : "");
+                label += $"###_Preset_{i}";
+                if (ImGui.Selectable(label, i == SelectedPreset, ImGuiSelectableFlags.AllowDoubleClick))
                 {
                     //	It's probably a bad idea to allow the selection to change when a preset's being edited.
                     if (!PluginUI.EditorWindow.EditingPreset)

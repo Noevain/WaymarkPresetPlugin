@@ -57,19 +57,12 @@ public sealed class WaymarkPresetLibrary
 
         return -1;
     }
-    internal int ImportPreset(string importStr,string importPrefix)
+    internal int ImportPreset(WaymarkPreset importedPreset,string importPrefix)
     {
         try
         {
-            var importedPreset = JsonConvert.DeserializeObject<WaymarkPreset>(importStr);
-            if (importedPreset != null)
-            {
                 importedPreset.Name = Subscription.SubscriptionManager.MakeName(importedPreset.Name, importPrefix);
                 return CreateOrReplacePreset(importedPreset);
-            }
-
-            Plugin.Log.Warning(
-                $"Error in WaymarkPresetLibrary.ImportPreset( string ): Deserialized input resulted in a null!");
         }
         catch (Exception e)
         {
@@ -113,6 +106,11 @@ public sealed class WaymarkPresetLibrary
             return ImportPreset_Common(preset);
 
         throw new Exception("Existing preset found but failed to delete");
+    }
+
+    internal int GetIndiceOfPresetIfExists(WaymarkPreset preset)
+    {
+        return Presets.FindIndex(element => element.Equals(preset));
     }
 
     internal int MovePreset(int indexToMove, int newPosition, bool placeAfter)
