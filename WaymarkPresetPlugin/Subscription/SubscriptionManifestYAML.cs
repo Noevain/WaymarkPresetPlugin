@@ -27,7 +27,8 @@ namespace WaymarkPresetPlugin.Subscription
 
     public class WaymarkYAML
     {
-        public string? name { get; set; } = null!;
-        public string? url { get; set; } = null!;
+        
+        public string name { get; set; } = null!;
+        public string url { get; set; } = null!;
     }
 }

@@ -66,7 +66,7 @@ public sealed class WaymarkPresetLibrary
         }
         catch (Exception e)
         {
-            Plugin.Log.Warning($"Error in WaymarkPresetLibrary.ImportPreset( string ):\r\n{e}");
+            Plugin.Log.Warning($"Error in WaymarkPresetLibrary.ImportPreset( WaymarkPreset importedPreset,string importPrefix ):\r\n{e}");
         }
 
         return -1;

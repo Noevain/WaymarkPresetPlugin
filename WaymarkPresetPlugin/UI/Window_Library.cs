@@ -741,6 +741,26 @@ internal sealed class WindowLibrary : IDisposable
                     updateExs.TryRemove(item.Name, out _);
                 }
             }
+            ImGui.SameLine();
+            if(!ImGui.IsKeyDown(ImGuiKey.LeftCtrl))
+                ImGui.BeginDisabled();
+            if (ImGui.Button("Delete"))
+            {
+                Configuration.SubscriptionManager.Unsubscribe(item,false);
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("Delete & all associated waymarks"))
+            {
+                Configuration.SubscriptionManager.Unsubscribe(item,true);
+            }
+
+            if (!ImGui.IsKeyDown(ImGuiKey.LeftCtrl))
+            {
+                ImGui.EndDisabled();
+            }
+            ImGuiUtils.HelpMarker(Loc.Localize("HelpDeleteSub","Deleting a subscription will " +
+                                                               "not delete all associated presets,use the 2nd option if you want to fully remove everything." +
+                                                               "Press CTRL to enable the delete buttons"));
 
         }
         try

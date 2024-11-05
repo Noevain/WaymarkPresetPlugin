@@ -53,7 +53,34 @@ public class SubscriptionManager
                 Configuration.Subscriptions.Add(repo);
                 Configuration.Save();
             }),token);
-        
+    }
+/// <summary>
+/// Remove the repo from subscriptions and stop tracking updates
+/// </summary>
+/// <param name="repo">SubscriptionRepo to remove</param>
+/// <param name="deleteAll">Should delete waymarks that are tracked by this subscription?</param>
+    public void Unsubscribe(SubscriptionRepo repo,bool deleteAll)
+    {
+        //deleting all related waymarks sounds a bit too destructive
+        //users still retain the ability to delete them individually
+        //buuuut just in case....
+        if (deleteAll)
+        {
+            for (int i = 0; i < Configuration.PresetLibrary.Presets.Count; i++)
+            {
+                if (Configuration.PresetLibrary.Presets[i].Name.Contains("["+repo.Name+"]"))
+                {
+                    if (!Configuration.PresetLibrary.DeletePreset(i))
+                    {
+                        Plugin.Log.Error(
+                            $"Failed to delete preset {Configuration.PresetLibrary.Presets[i].Name} at index {i}.");
+                    }
+                }
+            }
+        }
+
+        Configuration.Subscriptions.Remove(repo);
+        Configuration.Save();
     }
 /// <summary>
 /// Check the given SubscriptionRepo for any updates against known ETag
@@ -86,18 +113,20 @@ public class SubscriptionManager
                         $"Error while checking {waymark.url} , waymark: Deserialized input resulted in a null!");
                     return;
                 }
+
+                var idx = Configuration.PresetLibrary.GetIndiceOfPresetIfExists(importedPreset);
                 if (hasWaymarkUpdate)
                 {
                     hasUpdate = true;
                     //if this fails anyway this will overwrite the -1 key but since the waymark is not in the library we dont care
-                    status[Configuration.PresetLibrary.GetIndiceOfPresetIfExists(importedPreset)] = "Has update";
+                    status[idx] = "Has update";
                     if (shouldUpdate)
                     {
                         try
                         {
                             Plugin.Log.Debug($"Starting update for {importedPreset.Name}");
-                            int idx = Configuration.PresetLibrary.ImportPreset(importedPreset,manifest.name);
-                            status[idx] = "Updated";
+                            int idx_new = Configuration.PresetLibrary.ImportPreset(importedPreset,manifest.name);
+                            status[idx_new] = "Updated";
                         }
                         catch (Exception ex)
                         {
@@ -107,8 +136,32 @@ public class SubscriptionManager
                     }
                     return;
                 }
+                //edge case:waymark ETag is up to date but not found in library(user deletion)
+                //Check if we want to update,if not just mark the repo has having update
+                //Next update will add the waymarks back
+                if (idx == -1)
+                {
+                    if (!shouldUpdate)
+                    {
+                        hasUpdate = true;
+                        return;
+                    }
 
-                status[Configuration.PresetLibrary.GetIndiceOfPresetIfExists(importedPreset)] = "No update";
+                    try
+                    {
+                        Plugin.Log.Debug($"Starting update for {importedPreset.Name}");
+                        int idx_new = Configuration.PresetLibrary.ImportPreset(importedPreset,manifest.name);
+                        status[idx_new] = "Updated";
+                    }
+                    catch (Exception ex)
+                    {
+                        Plugin.Log.Error($"Failed update for {waymark.name}, exception: {ex}");
+                        hasErrored = true;
+                    }
+
+                    return;
+                }
+                status[idx] = "No update";
                 
             });
             Plugin.Log.Debug("Updating repo timestamp...");
@@ -121,7 +174,7 @@ public class SubscriptionManager
             subscription.LastUpdateCheck = DateTime.Now;
             Configuration.Subscriptions[subscriptionIdx] = subscription;
             Configuration.Save();
-        }));
+        }),cancellationToken);
     }
 
 /// <summary>
