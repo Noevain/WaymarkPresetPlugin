@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Dalamud.NET.Sdk/11.0.0">
 	<PropertyGroup>
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<Platforms>AnyCPU</Platforms>
@@ -24,7 +24,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="DalamudPackager" Version="11.0.0" />
 		<PackageReference Include="YamlDotNet" Version="16.2.0" />
 	</ItemGroup>
 
