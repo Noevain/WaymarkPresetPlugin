@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 
 namespace WaymarkPresetPlugin;
 
@@ -42,25 +42,28 @@ public static class ZoneInfoHandler
         //	ID of the maps for these zones too.  The best solution (for the time being) seems to be to store a pseudo map name string (the base of the map names for that zone) that can be cross-referenced later.
         foreach (var zone in territorySheet)
         {
-            if (ZoneInfoDict.ContainsKey((ushort) zone.ContentFinderCondition.Row) || (zone.ExclusiveType != 2 && !BodgeIncludeContentFinderConditionIDs.Contains((ushort)zone.ContentFinderCondition.Row)))
+            if (ZoneInfoDict.ContainsKey((ushort) zone.ContentFinderCondition.RowId) || (zone.ExclusiveType != 2 && !BodgeIncludeContentFinderConditionIDs.Contains((ushort)zone.ContentFinderCondition.RowId)))
                 continue;
 
-            var contentRow = contentFinderSheet.GetRow(zone.ContentFinderCondition.Row);
-            if (contentRow == null || (contentRow.ContentLinkType is <= 0 or >= 3 && !BodgeIncludeContentFinderConditionIDs.Contains((ushort) zone.ContentFinderCondition.Row)))
+            if (!contentFinderSheet.HasRow(zone.ContentFinderCondition.RowId))
                 continue;
 
-            if (!ZoneInfoDict.ContainsKey((ushort) zone.ContentFinderCondition.Row))
+            var contentRow = contentFinderSheet.GetRow(zone.ContentFinderCondition.RowId);
+            if (contentRow.ContentLinkType is <= 0 or >= 3 && !BodgeIncludeContentFinderConditionIDs.Contains((ushort) zone.ContentFinderCondition.RowId))
+                continue;
+
+            if (!ZoneInfoDict.ContainsKey((ushort) zone.ContentFinderCondition.RowId))
             {
                 var dutyName = Utils.ToStr(contentRow.Name).Trim();
                 if (dutyName.Length > 0)
                     dutyName = dutyName.First().ToString().ToUpper() + dutyName[1..];
 
                 ZoneInfoDict.Add(
-                    (ushort) zone.ContentFinderCondition.Row,
-                    new ZoneInfo(dutyName, Utils.ToStr(zone.PlaceName.Value!.Name), zone.RowId, zone.Map.Value!.Id.ToString().Split('/')[0], (ushort) zone.ContentFinderCondition.Row, contentRow.Content));
+                    (ushort) zone.ContentFinderCondition.RowId,
+                    new ZoneInfo(dutyName, Utils.ToStr(zone.PlaceName.Value!.Name), zone.RowId, zone.Map.Value!.Id.ToString().Split('/')[0], (ushort) zone.ContentFinderCondition.RowId, contentRow.Content.RowId));
             }
 
-            TerritoryTypeIDToContentFinderIDDict.TryAdd(zone.RowId, (ushort) zone.ContentFinderCondition.Row);
+            TerritoryTypeIDToContentFinderIDDict.TryAdd(zone.RowId, (ushort) zone.ContentFinderCondition.RowId);
         }
 
         //	Now get all of the map info for each territory.  We're doing it this way rather than solely taking the map column
@@ -73,7 +76,7 @@ public static class ZoneInfoHandler
             if (!MapInfoDict.ContainsKey(mapZoneKey))
                 MapInfoDict.Add(mapZoneKey, []);
 
-            MapInfoDict[mapZoneKey].Add(new MapInfo(map.Id, map.SizeFactor, map.OffsetX, map.OffsetY, map.PlaceNameSub.Value!.Name));
+            MapInfoDict[mapZoneKey].Add(new MapInfo(map.Id.ExtractText(), map.SizeFactor, map.OffsetX, map.OffsetY, map.PlaceNameSub.Value.Name.ExtractText()));
         }
     }
 

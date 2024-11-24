@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<Platforms>AnyCPU</Platforms>
-		<Version>1.5.2.1</Version>
+		<Version>1.5.2.5</Version>
 		<Authors>Infi, PunishedPineapple</Authors>
 		<Product />
 		<Copyright>Copyright @Infi, PunishedPineapple 2020-2024</Copyright>
@@ -24,16 +24,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="DalamudPackager" Version="2.1.13" />
-		<PackageReference Include="YamlDotNet" Version="16.1.3" />
+		<PackageReference Include="DalamudPackager" Version="11.0.0" />
 	</ItemGroup>
 
-	<!-- https://stackoverflow.com/questions/69576545/visual-studio-build-does-not-download-all-nuget-packages-without-a-project-refer
-	I dont know why I need to do that here while my others plugins build fine even with external dep but this works for now,I'll figure it out later
-	-->
-	<PropertyGroup>
-		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-	</PropertyGroup>
 	<PropertyGroup>
 		<DalamudLibPath>$(appdata)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
 		<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
